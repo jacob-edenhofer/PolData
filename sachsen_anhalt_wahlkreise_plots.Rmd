@@ -1,0 +1,375 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+# Preliminary Steps
+
+## Packages
+
+```{r, warning=FALSE, message=FALSE}
+remove(list = ls())
+library(tidyverse)
+library(readr)
+library(readxl)
+library(sf)
+library(kableExtra)
+```
+
+## Data
+
+```{r}
+# working directory 
+setwd("C:/Users/jacob/Documents/R_documents/Data")
+# import original data set
+land <- read_csv2("sachsen_anhalt_landtagswahl_2016.csv")
+# selecting rows that contain actual constituencies, deleting empty columns and columns containing Erststimmen, and renaming columns
+land <- land %>%
+  slice(16:58) %>%
+  select(-c(LEER, LEER_1, LEER_2, ERGART, WDATUM, C, starts_with("D"))) %>%
+  rename("Wahlberechtigte" = A, 
+         "Wahler" = B, 
+         "Ungueltige_Zweitstimmen" = E,
+         "Gueltige_Zweitstimmen" = F,
+         "CDU_Stimmen" = F01, 
+         "LINKE_Stimmen" = F02, 
+         "SPD_Stimmen" = F03, 
+         "Gruene_Stimmen" = F04,
+         "ALFA_Stimmen" = F05, 
+         "Tier_Stimmen" = F06, 
+         "AfD_Stimmen" = F07, 
+         "RECHTE_Stimmen" = F08,
+         "FBM_Stimmen" = F09, 
+         "FDP_Stimmen" = F10,
+         "FREIE_Stimmen" = F11,
+         "Magdeburg_Stimmen" = F12,
+         "NPD_Stimmen" = F13,
+         "Die_Partei_Stimmen" = F14, 
+         "Tierschutz_Stimmen" = F15,
+         "Geschlecht_Wahlkreissieger" = Wahlkreissieger) %>%
+  mutate(CDU_share = CDU_Stimmen/Gueltige_Zweitstimmen,
+         LINKE_share = LINKE_Stimmen/Gueltige_Zweitstimmen,
+         SPD_share = SPD_Stimmen/Gueltige_Zweitstimmen,
+         Gruene_share = Gruene_Stimmen/Gueltige_Zweitstimmen,
+         AfD_share = AfD_Stimmen/Gueltige_Zweitstimmen,
+         RECHTE_share = RECHTE_Stimmen/Gueltige_Zweitstimmen,
+         FDP_share = FDP_Stimmen/Gueltige_Zweitstimmen,
+         NPD_share = NPD_Stimmen/Gueltige_Zweitstimmen)
+# importing shapefile 
+mypath <- "C:/Users/jacob/Documents/R_documents/Data/sachsen_anhalt_wahlkreise/Wahlkreise_LT_2016.shp"
+kreise <- st_read(mypath)
+# merging these two lovely data sets 
+land_merged <- land %>%
+  inner_join(kreise, by = c("NR" = "WK_Nr_16"))
+```
+
+
+# Plots
+
+Let us do some preliminary plotting of *Zweitstimmen* vote shares. 
+
+## CDU Share
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = CDU_share)) +
+  scale_fill_distiller(name = "CDU Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 CDU Wahlkreise 
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, CDU_share) %>%
+  slice_max(CDU_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+### distribution of CDU vote share 
+
+```{r}
+land %>%
+  ggplot(aes(x = CDU_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.01, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$CDU_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "CDU Vote Share") + 
+  theme_bw()
+```
+
+
+
+## SPD vote share 
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = SPD_share)) +
+  scale_fill_distiller(name = "SPD Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 SPD Wahlkreise 
+
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, SPD_share) %>%
+  slice_max(SPD_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+### distribution of SPD vote shares
+
+```{r}
+land %>%
+  ggplot(aes(x = SPD_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.005, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$SPD_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "SPD Vote Share") + 
+  theme_bw()
+```
+
+
+## AfD vote share 
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = AfD_share)) +
+  scale_fill_distiller(name = "AfD Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+
+### Top 3 Wahlkreise 
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, AfD_share) %>%
+  slice_max(AfD_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+### distribution of AfD vote shares
+
+```{r}
+land %>%
+  ggplot(aes(x = AfD_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.01, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$AfD_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "AfD Vote Share") + 
+  theme_bw()
+```
+
+
+## Linke vote share 
+
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = LINKE_share)) +
+  scale_fill_distiller(name = "Linke Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 LINKE Wahlkreise
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, LINKE_share) %>%
+  slice_max(LINKE_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+
+### distribution of Linke vote share 
+
+```{r}
+land %>%
+  ggplot(aes(x = LINKE_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.01, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$LINKE_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "Linke Vote Share") + 
+  theme_bw()
+```
+
+
+## GRUENE vote share 
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = Gruene_share)) +
+  scale_fill_distiller(name = "Grüne Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 Grüne Wahlkreise 
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, Gruene_share) %>%
+  slice_max(Gruene_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+
+### distribution of Gruene vote share 
+
+```{r}
+land %>%
+  ggplot(aes(x = Gruene_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.01, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$Gruene_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "Linke Vote Share") + 
+  theme_bw()
+```
+
+
+## NPD share 
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = NPD_share)) +
+  scale_fill_distiller(name = "NPD Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 NPD Wahlkreise 
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, NPD_share) %>%
+  slice_max(NPD_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+### distribution of NPD vote shares 
+
+```{r}
+land %>%
+  ggplot(aes(x = NPD_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.005, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$NPD_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "NPD Vote Share") + 
+  theme_bw()
+```
+
+
+
+## Rechte Vote share 
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = RECHTE_share)) +
+  scale_fill_distiller(name = "Rechte Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 Rechte Wahlkreise
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, RECHTE_share) %>%
+  slice_max(RECHTE_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+### distribution of Rechte vote share 
+
+```{r}
+land %>%
+  ggplot(aes(x = RECHTE_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.001, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$RECHTE_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "Rechte Vote Share") + 
+  theme_bw()
+```
+
+
+## FDP vote share 
+
+```{r}
+land_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = FDP_share)) +
+  scale_fill_distiller(name = "FDP Vote Share", palette = "Spectral") +
+  theme_void()
+```
+
+### Top 3 FDP Wahlkreise 
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, FDP_share) %>%
+  slice_max(FDP_share, n = 3) %>%
+  kable(booktabs = T) %>%
+  kable_styling(full_width = F)
+```
+
+### distribution of FDP vote share 
+
+```{r}
+land %>%
+  ggplot(aes(x = FDP_share)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 0.005, color = "white") +
+  geom_density(color = "blue") +
+  geom_vline(xintercept = mean(land$FDP_share), 
+             linetype = "dashed", color = "red") +
+  labs(y = "Density", x = "Rechte Vote Share") + 
+  theme_bw()
+```
+
+
+# Table
+
+
+```{r}
+land_merged %>%
+  select(WK_Name_16, ends_with("_share")) %>%
+  group_by(WK_Name_16) %>%
+  summarise(CDU_share, SPD_share, LINKE_share, FDP_share, AfD_share, Gruene_share) %>%
+  arrange(desc(CDU_share)) %>%
+  kable(col.names = c("Wahlkreise", "CDU", "SPD", "Linke", "FDP", "AfD", "Gruene"), 
+        booktabs = T, digits = 2) %>%
+  add_header_above(c(" " = 1, "Vote Shares" = 6)) %>%
+  kable_styling(full_width = F)
+```
+
+
+
+

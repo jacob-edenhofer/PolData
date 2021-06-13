@@ -1,0 +1,310 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Preliminary Steps 
+
+## Packages 
+
+```{r, warning=FALSE, message=FALSE}
+remove(list = ls())
+library(tidyverse)
+library(readr)
+library(readxl)
+library(sf)
+library(kableExtra)
+```
+
+## Data 
+
+
+```{r, message=FALSE, warning=FALSE}
+# working directory 
+setwd("C:/Users/jacob/Documents/R_documents/Data")
+# import original data set
+land <- read_csv2("sachsen_anhalt_landtagswahl_2021.csv")
+# some wrangling
+lt21 <- land %>%
+  filter(grepl("WKR", Satzart)) %>%
+  mutate("CDU_share" = (CDU_Zweit/Gueltige_Zweitstimmen)*100,
+         "AfD_share" = (AfD_Zweit/Gueltige_Zweitstimmen)*100,
+         "LINKE_share" = (LINKE_Zweit/Gueltige_Zweitstimmen)*100,
+         "SPD_share" = (SPD_Zweit/Gueltige_Zweitstimmen)*100,
+         "Gruene_share" = (Gruene_Zweit/Gueltige_Zweitstimmen)*100,
+         "FDP_share" = (FDP_Zweit/Gueltige_Zweitstimmen)*100,
+         "NPD_share" = (NPD_Zweit/Gueltige_Zweitstimmen)*100,
+         "Basis_Zweit" = `F16 - dieBasis`,
+         "Basis_share" = (Basis_Zweit/Gueltige_Zweitstimmen)*100)
+# shapefile 
+mypath <- "C:/Users/jacob/Documents/R_documents/Data/sachsen_anhalt_wahlkreise_2021/Wahlkreise_LT_2021.shp"
+kreise21 <- st_read(mypath)
+# merge shapefile with election results 
+lt21_merged <- lt21 %>%
+  inner_join(kreise21, by = c("Schluesselnummer" = "WK_Nr_21"))
+```
+
+
+# Plots 
+
+## CDU Share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = CDU_share)) +
+  scale_fill_distiller(name = "CDU Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+## Top 3 CDU Wahlkreise 
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, CDU_share) %>%
+  slice_max(CDU_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+
+## Distribution of CDU vote share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(x = CDU_share, y = ..density..)) +
+  geom_histogram(binwidth = 1) +
+  geom_density(size = 1, color = "blue") +
+  geom_vline(xintercept = mean(lt21_merged$CDU_share), 
+             color = "red", size = 1) +
+  geom_vline(xintercept = mean(lt21_merged$CDU_share) + sd(lt21_merged$CDU_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean(lt21_merged$CDU_share) - sd(lt21_merged$CDU_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  labs(y = "Density", x = "CDU Zweitstimmen Share (%)") +
+  theme_bw()
+```
+
+## SPD vote share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = SPD_share)) +
+  scale_fill_distiller(name = "SPD Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+## Top 3 SPD Wahlkreise 
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, SPD_share) %>%
+  slice_max(SPD_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+## Distribution of SPD vote share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(x = SPD_share, y = ..density..)) +
+  geom_histogram(binwidth = 1) +
+  geom_density(size = 1, color = "blue") +
+  geom_vline(xintercept = mean(lt21_merged$SPD_share), 
+             color = "red", size = 1) +
+  geom_vline(xintercept = mean(lt21_merged$SPD_share) + sd(lt21_merged$SPD_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean(lt21_merged$SPD_share) - sd(lt21_merged$SPD_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  labs(y = "Density", x = "SPD Zweitstimmen Share (%)") +
+  theme_bw()
+```
+
+
+## AfD share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = AfD_share)) +
+  scale_fill_distiller(name = "AfD Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+## Top 3 AfD Wahlkreise 
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, AfD_share) %>%
+  slice_max(AfD_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+## Distribution of AfD Vote Share
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(x = AfD_share, y = ..density..)) +
+  geom_histogram(binwidth = 1) +
+  geom_density(size = 1, color = "blue") +
+  geom_vline(xintercept = mean(lt21_merged$AfD_share), 
+             color = "red", size = 1) +
+  geom_vline(xintercept = mean(lt21_merged$AfD_share) + sd(lt21_merged$AfD_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean(lt21_merged$AfD_share) - sd(lt21_merged$AfD_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  labs(y = "Density", x = "AfD Zweitstimmen Share (%)") +
+  theme_bw()
+```
+
+## Linke vote share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = LINKE_share)) +
+  scale_fill_distiller(name = "Linke Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+## Top 3 Linke Wahlkreise 
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, LINKE_share) %>%
+  slice_max(LINKE_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+
+## Distribution of Linke Votes 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(x = LINKE_share, y = ..density..)) +
+  geom_histogram(binwidth = 1) +
+  geom_density(size = 1, color = "blue") +
+  geom_vline(xintercept = mean(lt21_merged$LINKE_share), 
+             color = "red", size = 1) +
+  geom_vline(xintercept = mean(lt21_merged$LINKE_share) + sd(lt21_merged$LINKE_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean(lt21_merged$LINKE_share) - sd(lt21_merged$LINKE_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  labs(y = "Density", x = "Linke Zweitstimmen Share (%)") +
+  theme_bw()
+```
+
+## Grüne Vote Share 
+
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = Gruene_share)) +
+  scale_fill_distiller(name = "Gruene Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+
+## Top 3 Grüne Wahlkreise 
+
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, Gruene_share) %>%
+  slice_max(Gruene_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+## Distribution of Gruene Vote Share
+
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(x = Gruene_share, y = ..density..)) +
+  geom_histogram(binwidth = 1) +
+  geom_density(size = 1, color = "blue") +
+  geom_vline(xintercept = mean(lt21_merged$Gruene_share), 
+             color = "red", size = 1) +
+  geom_vline(xintercept = mean(lt21_merged$Gruene_share) + sd(lt21_merged$Gruene_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean(lt21_merged$Gruene_share) - sd(lt21_merged$Gruene_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  labs(y = "Density", x = "Gruene Zweitstimmen Share (%)") +
+  theme_bw()
+```
+
+## Basis Vote Share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = Basis_share)) +
+  scale_fill_distiller(name = "Basis Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+
+## Top 3 Basis Wahlkreise 
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, Basis_share) %>%
+  slice_max(Basis_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+
+## FDP vote share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = FDP_share)) +
+  scale_fill_distiller(name = "FDP Zweitstimmen\nShare (%)", 
+                       palette = "Spectral") +
+  theme_void()
+```
+
+## Top 3 FDP Wahlkreise 
+
+```{r}
+lt21_merged %>%
+  select(WK_Name_21, FDP_share) %>%
+  slice_max(FDP_share, n = 3) %>%
+  kable(booktabs = T, digits = 2) %>%
+  kable_styling(full_width = F)
+```
+
+## Distribution of FDP Share 
+
+```{r}
+lt21_merged %>%
+  ggplot(aes(x = FDP_share, y = ..density..)) +
+  geom_histogram(binwidth = 1) +
+  geom_density(size = 1, color = "blue") +
+  geom_vline(xintercept = mean(lt21_merged$FDP_share), 
+             color = "red", size = 1) +
+  geom_vline(xintercept = mean(lt21_merged$FDP_share) + sd(lt21_merged$FDP_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean(lt21_merged$FDP_share) - sd(lt21_merged$FDP_share), 
+             color = "red", size = 1, linetype = "dashed") +
+  labs(y = "Density", x = "FDP Zweitstimmen Share (%)") +
+  theme_bw()
+```
+
+
+
+
